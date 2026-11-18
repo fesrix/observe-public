@@ -83,16 +83,25 @@ deploy/           Ubuntu runbook, per-site Nginx, systemd, backup tooling
 
 ## Verification
 
+Run the unit tests and check the production build:
+
 ```bash
 npm test
 npm run typecheck
 npm run build
-node --env-file=.local/development.env --import tsx scripts/production-smoke.ts
+```
+
+With the local PostgreSQL process still running from Quick start, apply migrations to the separate test database before running the production smoke check or any database-backed tests:
+
+```bash
 node --env-file=.local/development.env --import tsx scripts/prepare-test-db.ts
+node --env-file=.local/development.env --import tsx scripts/production-smoke.ts
 node --env-file=.local/development.env --import tsx --test tests/db/booking.test.ts
 ```
 
-For browser tests, leave the local database running, stop any app already using port 3100, and start the dedicated test server in another terminal:
+The smoke check serves the built app on port 3102. It checks database readiness, the page title, and how the app handles an unauthenticated request to the workspace.
+
+For browser tests, keep the migrated test database running, stop any app already using port 3100, and start the dedicated test server in another terminal:
 
 ```bash
 node --env-file=.local/development.env --import tsx scripts/e2e-server.ts
