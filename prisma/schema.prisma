@@ -1,0 +1,127 @@
+generator client {
+  provider = "prisma-client-js"
+}
+datasource db {
+  provider = "postgresql"
+}
+enum Role {
+  ADMIN
+  STUDENT
+  TTC_MASTER
+}
+model User {
+  id String @id @default(uuid()) @db.Uuid
+  name String
+  email String? @unique
+  role Role @default(STUDENT)
+  passwordHash String?
+  active Boolean @default(true)
+  archivedAt DateTime? @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  credential Credential?
+  authSessions AuthSession[]
+  assignments Assignment[]
+  bookings Booking[]
+}
+model Credential {
+  userId String @id @db.Uuid
+  hash String @unique
+  user User @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+}
+model AuthSession {
+  id String @id
+  userId String @db.Uuid
+  user User @relation(fields: [userId], references: [id])
+  expiresAt DateTime @db.Timestamptz(3)
+  @@index([userId])
+  @@index([expiresAt])
+}
+model Course {
+  id String @id @default(uuid()) @db.Uuid
+  title String
+  description String @default("")
+  instructor String
+  location String
+  capacity Int @default(1)
+  archived Boolean @default(false)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  assignments Assignment[]
+  rules ScheduleRule[]
+  sessions ClassSession[]
+}
+model Assignment {
+  userId String @db.Uuid
+  courseId String @db.Uuid
+  user User @relation(fields: [userId], references: [id])
+  course Course @relation(fields: [courseId], references: [id])
+  @@id([userId, courseId])
+}
+model ScheduleRule {
+  id String @id @default(uuid()) @db.Uuid
+  courseId String @db.Uuid
+  course Course @relation(fields: [courseId], references: [id])
+  startDate String
+  endDate String
+  slots Json
+  version Int @default(1)
+  sessions ClassSession[]
+}
+model ClassSession {
+  id String @id @default(uuid()) @db.Uuid
+  courseId String @db.Uuid
+  course Course @relation(fields: [courseId], references: [id])
+  ruleId String? @db.Uuid
+  rule ScheduleRule? @relation(fields: [ruleId], references: [id])
+  occurrenceKey String?
+  slotOrdinal Int?
+  startAt DateTime @db.Timestamptz(3)
+  endAt DateTime @db.Timestamptz(3)
+  instructor String
+  location String
+  capacity Int
+  exception Boolean @default(false)
+  cancelled Boolean @default(false)
+  version Int @default(1)
+  bookings Booking[]
+  @@unique([ruleId, occurrenceKey])
+  @@index([courseId, startAt])
+  @@index([startAt])
+}
+model Booking {
+  id String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+  user User @relation(fields: [userId], references: [id])
+  sessionId String @db.Uuid
+  session ClassSession @relation(fields: [sessionId], references: [id])
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  cancelledAt DateTime? @db.Timestamptz(3)
+  cancellationReason String?
+  requestKey String @unique
+  feedback BookingFeedback?
+  @@index([userId, createdAt])
+  @@index([sessionId, cancelledAt])
+}
+model BookingFeedback {
+  bookingId String @id @db.Uuid
+  booking Booking @relation(fields: [bookingId], references: [id])
+  body String
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+}
+model AuditEvent {
+  id String @id @default(uuid()) @db.Uuid
+  actorId String? @db.Uuid
+  subjectId String? @db.Uuid
+  action String
+  outcome String @default("SUCCESS")
+  details Json
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  @@index([subjectId, createdAt])
+  @@index([createdAt])
+}
+model LoginThrottle {
+  key String @id
+  attempts Int @default(0)
+  resetAt DateTime @db.Timestamptz(3)
+}
