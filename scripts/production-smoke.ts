@@ -46,7 +46,11 @@ try {
   assert.ok(ready, "Production readiness timed out.");
   const page = await fetch("http://127.0.0.1:3102/");
   assert.equal(page.status, 200);
-  assert.ok((await page.text()).includes("Lingua"));
+  assert.match(
+    await page.text(),
+    /<title>Observe \| TTC Observation Portal<\/title>/,
+    "Expected the Observe page title.",
+  );
   assert.equal(page.headers.get("x-frame-options"), "DENY");
   assert.ok(
     !page.headers.get("content-security-policy")?.includes("unsafe-eval"),
